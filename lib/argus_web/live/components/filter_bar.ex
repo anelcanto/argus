@@ -6,14 +6,16 @@ defmodule ArgusWeb.Live.Components.FilterBar do
   attr :filters, :map, required: true
   attr :total, :integer, default: 0
   attr :filtered, :integer, default: 0
+  attr :github_count, :integer, default: 0
+  attr :gitlab_count, :integer, default: 0
 
   def filter_bar(assigns) do
     ~H"""
     <div class="bg-white border-b border-gray-100 shadow-sm">
-      <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-2 space-y-2">
-        <!-- Search row -->
-        <div class="flex items-center gap-3">
-          <div class="relative flex-1 sm:max-w-xs">
+      <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-2">
+        <div class="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <!-- Search -->
+          <div class="relative w-full sm:w-auto sm:max-w-xs">
             <.icon
               name="hero-magnifying-glass-mini"
               class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
@@ -27,14 +29,19 @@ defmodule ArgusWeb.Live.Components.FilterBar do
               class="w-full rounded-full border-gray-200 text-sm py-1.5 pl-8 pr-3 focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
             />
           </div>
-          <span class="ml-auto text-xs text-gray-400 tabular-nums whitespace-nowrap">
+          
+    <!-- Filtered count (only when filters narrow results) -->
+          <span
+            :if={filters_active?(@filters)}
+            class="text-xs text-gray-400 tabular-nums whitespace-nowrap"
+          >
             {@filtered} / {@total}
           </span>
-        </div>
-        
-    <!-- Filter pills row — scrolls horizontally on mobile -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-          <!-- State filters -->
+          
+    <!-- Divider -->
+          <div class="shrink-0 w-px h-4 bg-gray-200 mx-1" />
+          
+    <!-- State filters -->
           <button
             :for={
               state <- [
@@ -58,19 +65,27 @@ defmodule ArgusWeb.Live.Components.FilterBar do
     <!-- Divider -->
           <div class="shrink-0 w-px h-4 bg-gray-200 mx-1" />
           
-    <!-- Platform filters -->
+    <!-- Platform filters with counts -->
           <button
-            :for={platform <- [:all, :github, :gitlab]}
             phx-click="filter_platform"
-            phx-value-platform={platform}
-            class={
-              pill_class(
-                @filters[:platform] == platform or
-                  (platform == :all and is_nil(@filters[:platform]))
-              )
-            }
+            phx-value-platform="all"
+            class={pill_class(is_nil(@filters[:platform]))}
           >
-            {platform_label(platform)}
+            {platform_label(:all, @total)}
+          </button>
+          <button
+            phx-click="filter_platform"
+            phx-value-platform="github"
+            class={pill_class(@filters[:platform] == :github)}
+          >
+            {platform_label(:github, @github_count)}
+          </button>
+          <button
+            phx-click="filter_platform"
+            phx-value-platform="gitlab"
+            class={pill_class(@filters[:platform] == :gitlab)}
+          >
+            {platform_label(:gitlab, @gitlab_count)}
           </button>
           
     <!-- Divider -->
@@ -147,7 +162,7 @@ defmodule ArgusWeb.Live.Components.FilterBar do
   defp state_label(state),
     do: state |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
 
-  defp platform_label(:all), do: "All"
-  defp platform_label(:github), do: "GitHub"
-  defp platform_label(:gitlab), do: "GitLab"
+  defp platform_label(:all, count), do: "All (#{count})"
+  defp platform_label(:github, count), do: "GitHub (#{count})"
+  defp platform_label(:gitlab, count), do: "GitLab (#{count})"
 end

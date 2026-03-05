@@ -216,9 +216,14 @@ defmodule ArgusWeb.DashboardLive do
         nil
       end
 
+    github_count = Enum.count(assigns.prs, &(&1.source == :github))
+    gitlab_count = Enum.count(assigns.prs, &(&1.source == :gitlab))
+
     assigns = assign(assigns, :filtered_prs, sorted_prs)
     assigns = assign(assigns, :filtered_count, length(sorted_prs))
     assigns = assign(assigns, :total_count, length(assigns.prs))
+    assigns = assign(assigns, :github_count, github_count)
+    assigns = assign(assigns, :gitlab_count, gitlab_count)
     assigns = assign(assigns, :grouped_prs, grouped_prs)
 
     ~H"""
@@ -275,7 +280,13 @@ defmodule ArgusWeb.DashboardLive do
           </div>
         </header>
         <!-- Filter bar -->
-        <.filter_bar filters={@filters} total={@total_count} filtered={@filtered_count} />
+        <.filter_bar
+          filters={@filters}
+          total={@total_count}
+          filtered={@filtered_count}
+          github_count={@github_count}
+          gitlab_count={@gitlab_count}
+        />
       </div>
       
     <!-- PR list -->
