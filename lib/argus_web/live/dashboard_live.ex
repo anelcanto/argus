@@ -236,12 +236,12 @@ defmodule ArgusWeb.DashboardLive do
       <!-- Sticky header + filter combined -->
       <div class="sticky top-0 z-20">
         <!-- Header -->
-        <header class="bg-white border-b border-gray-100 px-4 sm:px-6 py-3">
-          <div class="max-w-screen-2xl mx-auto flex items-center justify-between gap-3 flex-wrap">
+        <header class="bg-white border-b border-gray-100 py-3">
+          <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-3 flex-wrap">
             <!-- Brand -->
             <div class="flex items-center gap-2.5">
-              <img src={~p"/images/eye.svg"} class="h-8 w-auto" alt="" aria-hidden="true" />
-              <img src={~p"/images/argus-title.svg"} class="h-5 w-auto" alt="Argus" />
+              <img src={~p"/images/eye.svg"} class="h-7 w-auto" alt="" aria-hidden="true" />
+              <img src={~p"/images/argus-title.svg"} class="h-6 w-auto" alt="Argus" />
               <.badge :if={@stale} variant={:warning} icon_name="hero-clock-mini">Cached</.badge>
             </div>
             <!-- Right actions -->
