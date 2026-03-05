@@ -240,8 +240,8 @@ defmodule ArgusWeb.DashboardLive do
           <div class="max-w-screen-2xl mx-auto flex items-center justify-between gap-3 flex-wrap">
             <!-- Brand -->
             <div class="flex items-center gap-2.5">
-              <h1 class="text-base font-bold text-gray-900 tracking-tight">Argus</h1>
-              <span class="text-xs text-gray-400 hidden sm:inline">PR Monitor</span>
+              <img src={~p"/images/eye.svg"} class="h-8 w-auto" alt="" aria-hidden="true" />
+              <img src={~p"/images/argus-title.svg"} class="h-5 w-auto" alt="Argus" />
               <.badge :if={@stale} variant={:warning} icon_name="hero-clock-mini">Cached</.badge>
             </div>
             <!-- Right actions -->
