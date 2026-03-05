@@ -96,6 +96,16 @@ defmodule Argus.Cache.PrCache do
     end
   end
 
+  def delete_pr(user_id, source, repo_owner, repo_name, number) do
+    from(c in CachedPullRequest,
+      where:
+        c.user_id == ^user_id and c.source == ^source and
+          c.repo_owner == ^repo_owner and c.repo_name == ^repo_name and
+          c.number == ^number
+    )
+    |> Repo.delete_all()
+  end
+
   def get_user_ids_for_repo(owner, repo_name) do
     from(c in CachedPullRequest,
       where: c.repo_owner == ^owner and c.repo_name == ^repo_name,

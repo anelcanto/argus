@@ -84,6 +84,15 @@ defmodule ArgusWeb.SettingsLive do
         {:noreply,
          assign(socket, :pat_flash, {:error, :gitlab, "Token is invalid or unauthorized."})}
 
+      {:error, :insufficient_scope} ->
+        {:noreply,
+         assign(
+           socket,
+           :pat_flash,
+           {:error, :gitlab,
+            "Token is valid but missing the `api` scope. Please create a new token with full API access."}
+         )}
+
       {:error, _} ->
         {:noreply, assign(socket, :pat_flash, {:error, :gitlab, "Failed to validate token."})}
     end
@@ -265,8 +274,15 @@ defmodule ArgusWeb.SettingsLive do
                 <p class="text-xs text-red-600">{msg}</p>
               <% _ -> %>
                 <p class="text-xs text-gray-400">
-                  Generate at github.com/settings/tokens/new — required scopes: <code>repo</code>, <code>read:org</code>,
-                  <code>user:email</code>
+                  Generate at
+                  <a
+                    href="https://github.com/settings/tokens/new"
+                    target="_blank"
+                    class="underline hover:text-gray-600"
+                  >
+                    github.com/settings/tokens/new
+                  </a>
+                  — required scopes: <code>repo</code>, <code>read:org</code>, <code>user:email</code>
                 </p>
             <% end %>
           </div>
@@ -301,9 +317,16 @@ defmodule ArgusWeb.SettingsLive do
                 <p class="text-xs text-red-600">{msg}</p>
               <% _ -> %>
                 <p class="text-xs text-gray-400">
-                  Generate at {@current_user.gitlab_url ||
-                    Application.get_env(:argus, :gitlab_url, "https://gitlab.com")}/-/user_settings/personal_access_tokens — required scopes: <code>read_user</code>, <code>api</code>,
-                  <code>read_api</code>
+                  Generate at
+                  <a
+                    href={"#{@current_user.gitlab_url || Application.get_env(:argus, :gitlab_url, "https://gitlab.com")}/-/user_settings/personal_access_tokens"}
+                    target="_blank"
+                    class="underline hover:text-gray-600"
+                  >
+                    {@current_user.gitlab_url ||
+                      Application.get_env(:argus, :gitlab_url, "https://gitlab.com")}/-/user_settings/personal_access_tokens
+                  </a>
+                  — required scope: <code>api</code>
                 </p>
             <% end %>
           </div>

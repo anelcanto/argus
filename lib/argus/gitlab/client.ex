@@ -104,6 +104,46 @@ defmodule Argus.Gitlab.Client do
     end
   end
 
+  def close_mr(token, project_id, mr_iid, base_url \\ nil) do
+    client = build_client(token, build_base_url(base_url))
+
+    case Req.put(client,
+           url: "/projects/#{encode_id(project_id)}/merge_requests/#{mr_iid}",
+           json: %{state_event: "close"}
+         ) do
+      {:ok, %{status: 200}} ->
+        :ok
+
+      {:ok, %{status: 403}} ->
+        {:error, :forbidden}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http_error, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  def check_token_scopes(token, base_url \\ nil) do
+    client = build_client(token, build_base_url(base_url))
+
+    case Req.get(client, url: "/personal_access_tokens/self") do
+      {:ok, %{status: 200, body: body}} ->
+        scopes = body["scopes"] || []
+        {:ok, scopes}
+
+      {:ok, %{status: 401}} ->
+        {:error, :unauthorized}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http_error, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   def validate_token(token, base_url \\ nil) do
     client = build_client(token, build_base_url(base_url))
 

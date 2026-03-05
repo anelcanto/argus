@@ -142,6 +142,27 @@ defmodule Argus.Github.Client do
     end
   end
 
+  def close_pr(token, owner, repo, number) do
+    client = build_client(token)
+
+    case Req.patch(client,
+           url: "/repos/#{owner}/#{repo}/pulls/#{number}",
+           json: %{state: "closed"}
+         ) do
+      {:ok, %{status: 200}} ->
+        :ok
+
+      {:ok, %{status: 403}} ->
+        {:error, :forbidden}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http_error, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   def validate_token(token) do
     client = build_client(token)
 

@@ -11,6 +11,8 @@ defmodule ArgusWeb.DashboardLive do
 
   alias Argus.{Accounts, Filters}
   alias Argus.Cache.PrCache
+  alias Argus.Github
+  alias Argus.Gitlab
   alias Argus.Sync.Poller
 
   @refresh_interval 300
@@ -155,15 +157,59 @@ defmodule ArgusWeb.DashboardLive do
     {:noreply, assign(socket, :expanded_checks, new_expanded)}
   end
 
-  def handle_event("toggle_pin", %{"pr" => pr_id_str}, socket) do
-    pr_id = String.to_integer(pr_id_str)
+  def handle_event(
+        "close_pr",
+        %{"source" => source, "owner" => owner, "repo" => repo, "number" => number_str},
+        socket
+      ) do
+    number = String.to_integer(number_str)
+    user = socket.assigns.current_user
+
+    result =
+      case source do
+        "github" ->
+          Github.Client.close_pr(Accounts.get_decrypted_token(user), owner, repo, number)
+
+        "gitlab" ->
+          project_id = "#{owner}/#{repo}"
+          token = Accounts.get_decrypted_gitlab_token(user)
+          Gitlab.Client.close_mr(token, project_id, number, user.gitlab_url)
+      end
+
+    case result do
+      :ok ->
+        PrCache.delete_pr(user.id, source, owner, repo, number)
+
+        updated_prs =
+          Enum.reject(
+            socket.assigns.prs,
+            &(to_string(&1.source) == source and &1.repo_owner == owner and &1.repo_name == repo and
+                &1.number == number)
+          )
+
+        {:noreply, assign(socket, :prs, updated_prs)}
+
+      {:error, {:http_error, 401}} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "GitLab returned 401 — your token may be missing the `api` scope. Re-add it in Settings."
+         )}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to close PR: #{inspect(reason)}")}
+    end
+  end
+
+  def handle_event("toggle_pin", %{"pr" => pr_key}, socket) do
     pins = socket.assigns.pinned_prs
 
     new_pins =
-      if MapSet.member?(pins, pr_id) do
-        MapSet.delete(pins, pr_id)
+      if MapSet.member?(pins, pr_key) do
+        MapSet.delete(pins, pr_key)
       else
-        MapSet.put(pins, pr_id)
+        MapSet.put(pins, pr_key)
       end
 
     {:noreply, assign(socket, :pinned_prs, new_pins)}
@@ -203,7 +249,8 @@ defmodule ArgusWeb.DashboardLive do
     sorted_prs =
       filtered_prs
       |> Enum.sort_by(fn pr ->
-        pinned = if MapSet.member?(assigns.pinned_prs, pr.id), do: 0, else: 1
+        key = "#{pr.source}:#{pr.repo_owner}/#{pr.repo_name}##{pr.number}"
+        pinned = if MapSet.member?(assigns.pinned_prs, key), do: 0, else: 1
         {pinned, state_sort_key(pr.computed_state)}
       end)
 
@@ -319,7 +366,12 @@ defmodule ArgusWeb.DashboardLive do
             :for={pr <- @filtered_prs}
             pr={pr}
             expanded={MapSet.member?(@expanded_checks, pr.number)}
-            pinned={MapSet.member?(@pinned_prs, pr.id)}
+            pinned={
+              MapSet.member?(
+                @pinned_prs,
+                "#{pr.source}:#{pr.repo_owner}/#{pr.repo_name}##{pr.number}"
+              )
+            }
           />
         </div>
         
@@ -336,7 +388,12 @@ defmodule ArgusWeb.DashboardLive do
                 :for={pr <- prs}
                 pr={pr}
                 expanded={MapSet.member?(@expanded_checks, pr.number)}
-                pinned={MapSet.member?(@pinned_prs, pr.id)}
+                pinned={
+                  MapSet.member?(
+                    @pinned_prs,
+                    "#{pr.source}:#{pr.repo_owner}/#{pr.repo_name}##{pr.number}"
+                  )
+                }
               />
             </div>
           </div>

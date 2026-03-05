@@ -40,25 +40,56 @@ defmodule ArgusWeb.Live.Components.PrCard do
 
   def pr_card(assigns) do
     ~H"""
-    <div class={"flex flex-col gap-2.5 rounded-xl border p-4 bg-white shadow-sm transition-shadow hover:shadow-md " <>
-      if(@pinned, do: "border-blue-300 ring-1 ring-blue-100", else: "border-gray-200")}>
+    <div
+      id={"pr-#{@pr.source}-#{@pr.repo_owner}-#{@pr.repo_name}-#{@pr.number}"}
+      class={"flex flex-col gap-2.5 rounded-xl border p-4 bg-white shadow-sm transition-shadow hover:shadow-md " <>
+      if(@pinned, do: "border-blue-300 ring-1 ring-blue-100", else: "border-gray-200")}
+    >
       
-    <!-- Row 1: badges + pin button -->
+    <!-- Row 1: badges + actions -->
       <div class="flex items-start justify-between gap-2">
         <div class="flex items-center gap-1.5 flex-wrap min-w-0">
           <.pr_state_badge state={@pr.computed_state} />
           <.platform_icon source={@pr.source} />
           <.badge :if={@pr.draft} variant={:secondary}>Draft</.badge>
         </div>
-        <button
-          phx-click="toggle_pin"
-          phx-value-pr={@pr.id}
-          class={"shrink-0 p-0.5 rounded transition-colors " <>
-            if(@pinned, do: "text-blue-500 bg-blue-50", else: "text-gray-300 hover:text-gray-500")}
-          title={if @pinned, do: "Unpin", else: "Pin"}
-        >
-          <.icon name={if @pinned, do: "hero-bookmark-solid", else: "hero-bookmark"} class="w-4 h-4" />
-        </button>
+        <div class="flex items-center gap-0.5 shrink-0">
+          <button
+            phx-click="toggle_pin"
+            phx-value-pr={"#{@pr.source}:#{@pr.repo_owner}/#{@pr.repo_name}##{@pr.number}"}
+            class={"p-0.5 rounded transition-colors " <>
+              if(@pinned, do: "text-blue-500 bg-blue-50", else: "text-gray-300 hover:text-gray-500")}
+            title={if @pinned, do: "Unpin", else: "Pin"}
+          >
+            <.icon
+              name={if @pinned, do: "hero-bookmark-solid", else: "hero-bookmark"}
+              class="w-4 h-4"
+            />
+          </button>
+          <div
+            id={"menu-#{@pr.source}-#{@pr.repo_owner}-#{@pr.repo_name}-#{@pr.number}"}
+            phx-update="ignore"
+          >
+            <details class="relative">
+              <summary class="p-0.5 rounded text-gray-300 hover:text-gray-500 transition-colors cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                <.icon name="hero-ellipsis-horizontal-mini" class="w-4 h-4" />
+              </summary>
+              <div class="absolute right-0 top-6 z-30 bg-white border border-gray-200 rounded-lg shadow-md py-1 min-w-[130px]">
+                <button
+                  phx-click="close_pr"
+                  phx-value-source={@pr.source}
+                  phx-value-owner={@pr.repo_owner}
+                  phx-value-repo={@pr.repo_name}
+                  phx-value-number={@pr.number}
+                  data-confirm="Close this PR?"
+                  class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors text-left"
+                >
+                  <.icon name="hero-x-mark-mini" class="w-3.5 h-3.5 shrink-0" /> Close PR
+                </button>
+              </div>
+            </details>
+          </div>
+        </div>
       </div>
       
     <!-- Row 2: repo + number -->

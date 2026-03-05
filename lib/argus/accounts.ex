@@ -90,20 +90,19 @@ defmodule Argus.Accounts do
   def save_gitlab_pat(user, token) do
     base_url = user.gitlab_url
 
-    case Argus.Gitlab.Client.validate_token(token, base_url) do
-      {:ok, %{id: gitlab_id, username: username}} ->
-        encrypted = encrypt_gitlab_token(token)
+    with {:ok, %{id: gitlab_id, username: username}} <-
+           Argus.Gitlab.Client.validate_token(token, base_url),
+         {:ok, scopes} <- Argus.Gitlab.Client.check_token_scopes(token, base_url),
+         true <- "api" in scopes || {:error, :insufficient_scope} do
+      encrypted = encrypt_gitlab_token(token)
 
-        user
-        |> User.upsert_changeset(%{
-          gitlab_token: encrypted,
-          gitlab_id: gitlab_id,
-          gitlab_username: username
-        })
-        |> Repo.update()
-
-      {:error, reason} ->
-        {:error, reason}
+      user
+      |> User.upsert_changeset(%{
+        gitlab_token: encrypted,
+        gitlab_id: gitlab_id,
+        gitlab_username: username
+      })
+      |> Repo.update()
     end
   end
 
