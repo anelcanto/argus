@@ -1,0 +1,59 @@
+repos:
+  - repo: builtin
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.exs?$
+      - id: end-of-file-fixer
+        exclude: \.exs?$
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: fix-byte-order-marker
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+
+  - repo: local
+    hooks:
+      - id: mix-format
+        name: mix format
+        entry: mix format --check-formatted
+        language: system
+        files: \.exs?$
+        pass_filenames: false
+
+      - id: mix-compile
+        name: mix compile warnings
+        entry: mix compile --warnings-as-errors
+        language: system
+        files: \.exs?$
+        pass_filenames: false
+
+      - id: mix-credo
+        name: mix credo
+        entry: mix credo --strict
+        language: system
+        files: \.exs?$
+        pass_filenames: false
+
+      - id: mix-hex-audit
+        name: mix hex.audit
+        entry: mix hex.audit
+        language: system
+        pass_filenames: false
+
+      - id: mix-test
+        name: mix test
+        entry: mix test
+        language: system
+        files: \.exs?$
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: mix-dialyzer
+        name: mix dialyzer
+        entry: mix dialyzer --format dialyzer --quiet
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
