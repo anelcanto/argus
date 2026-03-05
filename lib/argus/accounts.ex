@@ -61,6 +61,52 @@ defmodule Argus.Accounts do
     end
   end
 
+  def disconnect_github(user) do
+    user
+    |> User.upsert_changeset(%{github_id: nil, github_token: nil})
+    |> Repo.update()
+  end
+
+  def disconnect_gitlab(user) do
+    user
+    |> User.upsert_changeset(%{gitlab_id: nil, gitlab_token: nil, gitlab_username: nil})
+    |> Repo.update()
+  end
+
+  def save_github_pat(user, token) do
+    case Argus.Github.Client.validate_token(token) do
+      {:ok, %{id: github_id}} ->
+        encrypted = encrypt_token(token)
+
+        user
+        |> User.upsert_changeset(%{github_token: encrypted, github_id: github_id})
+        |> Repo.update()
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  def save_gitlab_pat(user, token) do
+    base_url = user.gitlab_url
+
+    case Argus.Gitlab.Client.validate_token(token, base_url) do
+      {:ok, %{id: gitlab_id, username: username}} ->
+        encrypted = encrypt_gitlab_token(token)
+
+        user
+        |> User.upsert_changeset(%{
+          gitlab_token: encrypted,
+          gitlab_id: gitlab_id,
+          gitlab_username: username
+        })
+        |> Repo.update()
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   def update_github_token(user, token) do
     encrypted = encrypt_token(token)
 

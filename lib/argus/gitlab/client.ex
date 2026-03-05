@@ -104,6 +104,24 @@ defmodule Argus.Gitlab.Client do
     end
   end
 
+  def validate_token(token, base_url \\ nil) do
+    client = build_client(token, build_base_url(base_url))
+
+    case Req.get(client, url: "/user") do
+      {:ok, %{status: 200, body: body}} ->
+        {:ok, %{id: to_string(body["id"]), username: body["username"]}}
+
+      {:ok, %{status: 401}} ->
+        {:error, :unauthorized}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http_error, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   # Build full API base URL from a per-user gitlab_url override (or nil to use app default)
   defp build_base_url(nil), do: nil
   defp build_base_url(url), do: String.trim_trailing(url, "/") <> "/api/v4"

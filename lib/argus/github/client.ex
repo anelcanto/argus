@@ -142,6 +142,24 @@ defmodule Argus.Github.Client do
     end
   end
 
+  def validate_token(token) do
+    client = build_client(token)
+
+    case Req.get(client, url: "/user") do
+      {:ok, %{status: 200, body: body}} ->
+        {:ok, %{id: to_string(body["id"]), login: body["login"]}}
+
+      {:ok, %{status: 401}} ->
+        {:error, :unauthorized}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http_error, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp track_rate_limit(%{headers: headers}) do
     remaining = headers["x-ratelimit-remaining"]
 
