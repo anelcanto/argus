@@ -58,6 +58,7 @@ defmodule ArgusWeb.DashboardLive do
         |> assign(:pinned_prs, MapSet.new())
         |> assign(:countdown, @refresh_interval)
         |> assign(:stale, PrCache.stale?(current_user.id))
+        |> assign(:config_loaded, false)
 
       if connected?(socket) and needs_refresh?(current_user) do
         Poller.refresh_user(current_user.id)
@@ -99,7 +100,7 @@ defmodule ArgusWeb.DashboardLive do
       group_by_repo: params["group_by_repo"] || false
     }
 
-    {:noreply, assign(socket, :filters, filters)}
+    {:noreply, socket |> assign(:filters, filters) |> assign(:config_loaded, true)}
   end
 
   def handle_event("clear_filters", _params, socket) do
@@ -327,74 +328,78 @@ defmodule ArgusWeb.DashboardLive do
           </div>
         </header>
         <!-- Filter bar -->
-        <.filter_bar
-          filters={@filters}
-          total={@total_count}
-          filtered={@filtered_count}
-          github_count={@github_count}
-          gitlab_count={@gitlab_count}
-        />
+        <div class={"transition-opacity duration-150 #{if @config_loaded, do: "opacity-100", else: "opacity-0"}"}>
+          <.filter_bar
+            filters={@filters}
+            total={@total_count}
+            filtered={@filtered_count}
+            github_count={@github_count}
+            gitlab_count={@gitlab_count}
+          />
+        </div>
       </div>
       
     <!-- PR list -->
       <main class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-5 pb-20">
-        <!-- Skeleton loading: stale with no cached data -->
-        <div
-          :if={@stale and length(@prs) == 0}
-          class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3"
-        >
-          <.skeleton_cards count={6} />
-        </div>
-        
+        <div class={"transition-opacity duration-150 #{if @config_loaded, do: "opacity-100", else: "opacity-0"}"}>
+          <!-- Skeleton loading: stale with no cached data -->
+          <div
+            :if={@stale and length(@prs) == 0}
+            class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3"
+          >
+            <.skeleton_cards count={6} />
+          </div>
+          
     <!-- Empty state: not stale and no PRs at all -->
-        <.empty_state :if={not @stale and length(@prs) == 0} />
-        
+          <.empty_state :if={not @stale and length(@prs) == 0} />
+          
     <!-- No filter match -->
-        <div
-          :if={length(@filtered_prs) == 0 and length(@prs) > 0}
-          class="text-center py-12 text-gray-400 text-sm"
-        >
-          No PRs match your filters.
-        </div>
-        
+          <div
+            :if={length(@filtered_prs) == 0 and length(@prs) > 0}
+            class="text-center py-12 text-gray-400 text-sm"
+          >
+            No PRs match your filters.
+          </div>
+          
     <!-- PR grid (flat) -->
-        <div
-          :if={length(@filtered_prs) > 0 and is_nil(@grouped_prs)}
-          class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3"
-        >
-          <.pr_card
-            :for={pr <- @filtered_prs}
-            pr={pr}
-            expanded={MapSet.member?(@expanded_checks, pr.number)}
-            pinned={
-              MapSet.member?(
-                @pinned_prs,
-                "#{pr.source}:#{pr.repo_owner}/#{pr.repo_name}##{pr.number}"
-              )
-            }
-          />
-        </div>
-        
+          <div
+            :if={length(@filtered_prs) > 0 and is_nil(@grouped_prs)}
+            class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3"
+          >
+            <.pr_card
+              :for={pr <- @filtered_prs}
+              pr={pr}
+              expanded={MapSet.member?(@expanded_checks, pr.number)}
+              pinned={
+                MapSet.member?(
+                  @pinned_prs,
+                  "#{pr.source}:#{pr.repo_owner}/#{pr.repo_name}##{pr.number}"
+                )
+              }
+            />
+          </div>
+          
     <!-- PR grid (grouped by repo) -->
-        <div :if={length(@filtered_prs) > 0 and not is_nil(@grouped_prs)} class="space-y-6">
-          <div :for={{repo, prs} <- @grouped_prs}>
-            <h2 class="text-sm font-semibold text-gray-500 mb-2 flex items-center gap-1.5">
-              <.icon name="hero-code-bracket-mini" class="w-3.5 h-3.5 text-gray-400" />
-              {repo}
-              <span class="font-normal text-gray-400">({length(prs)})</span>
-            </h2>
-            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-              <.pr_card
-                :for={pr <- prs}
-                pr={pr}
-                expanded={MapSet.member?(@expanded_checks, pr.number)}
-                pinned={
-                  MapSet.member?(
-                    @pinned_prs,
-                    "#{pr.source}:#{pr.repo_owner}/#{pr.repo_name}##{pr.number}"
-                  )
-                }
-              />
+          <div :if={length(@filtered_prs) > 0 and not is_nil(@grouped_prs)} class="space-y-6">
+            <div :for={{repo, prs} <- @grouped_prs}>
+              <h2 class="text-sm font-semibold text-gray-500 mb-2 flex items-center gap-1.5">
+                <.icon name="hero-code-bracket-mini" class="w-3.5 h-3.5 text-gray-400" />
+                {repo}
+                <span class="font-normal text-gray-400">({length(prs)})</span>
+              </h2>
+              <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+                <.pr_card
+                  :for={pr <- prs}
+                  pr={pr}
+                  expanded={MapSet.member?(@expanded_checks, pr.number)}
+                  pinned={
+                    MapSet.member?(
+                      @pinned_prs,
+                      "#{pr.source}:#{pr.repo_owner}/#{pr.repo_name}##{pr.number}"
+                    )
+                  }
+                />
+              </div>
             </div>
           </div>
         </div>
