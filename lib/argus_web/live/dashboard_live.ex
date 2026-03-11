@@ -60,7 +60,7 @@ defmodule ArgusWeb.DashboardLive do
         |> assign(:stale, PrCache.stale?(current_user.id))
         |> assign(:config_loaded, false)
 
-      if connected?(socket) and needs_refresh?(current_user) do
+      if connected?(socket) do
         Poller.refresh_user(current_user.id)
       end
 
@@ -419,12 +419,6 @@ defmodule ArgusWeb.DashboardLive do
       platform: f[:platform] && Atom.to_string(f[:platform]),
       group_by_repo: f[:group_by_repo]
     })
-  end
-
-  defp needs_refresh?(user) do
-    PrCache.stale?(user.id) or
-      (not is_nil(user.gitlab_token) and PrCache.missing_source?(user.id, "gitlab")) or
-      (not is_nil(user.github_token) and PrCache.missing_source?(user.id, "github"))
   end
 
   defp state_sort_key(:needs_attention), do: 1

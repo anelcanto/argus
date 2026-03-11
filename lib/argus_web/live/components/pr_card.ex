@@ -8,6 +8,7 @@ defmodule ArgusWeb.Live.Components.PrCard do
   import ArgusWeb.Live.Components.CiChecksDetail
 
   alias Argus.PullRequests.PrState
+  alias Phoenix.LiveView.JS
 
   attr :source, :atom, required: true
 
@@ -42,6 +43,7 @@ defmodule ArgusWeb.Live.Components.PrCard do
     ~H"""
     <div
       id={"pr-#{@pr.source}-#{@pr.repo_owner}-#{@pr.repo_name}-#{@pr.number}"}
+      phx-mounted={JS.add_class("animate-fade-in")}
       class={"flex flex-col gap-2.5 rounded-xl border p-4 bg-white shadow-sm transition-shadow hover:shadow-md " <>
       if(@pinned, do: "border-blue-300 ring-1 ring-blue-100", else: "border-gray-200")}
     >
