@@ -146,18 +146,26 @@ defmodule Argus.Sync.Poller do
   end
 
   defp enrich_github_prs(token, issues) do
-    Task.async_stream(
-      issues,
-      &enrich_github_issue(token, &1),
-      max_concurrency: @max_concurrency,
-      timeout: :timer.seconds(30)
-    )
+    results =
+      Task.async_stream(
+        issues,
+        &enrich_github_issue(token, &1),
+        max_concurrency: @max_concurrency,
+        timeout: :timer.seconds(30)
+      )
+      |> Enum.to_list()
+
+    Enum.zip(results, issues)
     |> Enum.flat_map(fn
-      {:ok, pr} ->
+      {{:ok, pr}, _issue} ->
         [pr]
 
-      {:error, reason} ->
-        Logger.warning("Poller: GitHub enrichment error #{inspect(reason)}") && []
+      {{:error, reason}, issue} ->
+        Logger.warning(
+          "Poller: GitHub enrichment error #{inspect(reason)}, using minimal PR data"
+        )
+
+        [PullRequest.from_api(issue)]
     end)
   end
 
@@ -184,18 +192,26 @@ defmodule Argus.Sync.Poller do
   end
 
   defp enrich_gitlab_mrs(token, mrs, base_url) do
-    Task.async_stream(
-      mrs,
-      &enrich_gitlab_mr(token, &1, base_url),
-      max_concurrency: @max_concurrency,
-      timeout: :timer.seconds(30)
-    )
+    results =
+      Task.async_stream(
+        mrs,
+        &enrich_gitlab_mr(token, &1, base_url),
+        max_concurrency: @max_concurrency,
+        timeout: :timer.seconds(30)
+      )
+      |> Enum.to_list()
+
+    Enum.zip(results, mrs)
     |> Enum.flat_map(fn
-      {:ok, mr} ->
+      {{:ok, mr}, _raw} ->
         [mr]
 
-      {:error, reason} ->
-        Logger.warning("Poller: GitLab enrichment error #{inspect(reason)}") && []
+      {{:error, reason}, raw_mr} ->
+        Logger.warning(
+          "Poller: GitLab enrichment error #{inspect(reason)}, using minimal MR data"
+        )
+
+        [PullRequest.from_gitlab_api(raw_mr, [], [])]
     end)
   end
 

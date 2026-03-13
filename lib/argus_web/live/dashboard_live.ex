@@ -69,10 +69,12 @@ defmodule ArgusWeb.DashboardLive do
   end
 
   @impl true
-  def handle_info({:prs_updated, prs}, socket) do
+  def handle_info({:prs_updated, _prs}, socket) do
+    user_id = socket.assigns.viewing_user_id || socket.assigns.current_user.id
+
     {:noreply,
      socket
-     |> assign(:prs, prs)
+     |> assign(:prs, PrCache.get_cached_prs(user_id))
      |> assign(:stale, false)
      |> assign(:countdown, @refresh_interval)}
   end

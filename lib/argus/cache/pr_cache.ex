@@ -46,7 +46,32 @@ defmodule Argus.Cache.PrCache do
       Repo.insert_all(
         CachedPullRequest,
         entries,
-        on_conflict: {:replace_all_except, [:inserted_at]},
+        on_conflict:
+          {:replace,
+           [
+             :source,
+             :project_id,
+             :github_pr_id,
+             :number,
+             :repo_owner,
+             :repo_name,
+             :title,
+             :url,
+             :branch,
+             :base_branch,
+             :author_login,
+             :is_draft,
+             :ci_state,
+             :check_runs,
+             :review_state,
+             :review_decision,
+             :unresolved_comment_count,
+             :has_merge_conflicts,
+             :computed_state,
+             :pr_created_at,
+             :pr_updated_at,
+             :updated_at
+           ]},
         conflict_target: [:user_id, :source, :repo_owner, :repo_name, :number]
       )
 
