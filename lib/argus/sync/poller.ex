@@ -67,12 +67,12 @@ defmodule Argus.Sync.Poller do
     all_prs = github_prs ++ gitlab_mrs
 
     if all_prs != [] or has_any_token?(user) do
-      github_ids = github_prs |> Enum.filter(&(&1.source == :github)) |> Enum.map(& &1.number)
-      gitlab_ids = gitlab_mrs |> Enum.filter(&(&1.source == :gitlab)) |> Enum.map(& &1.number)
+      github_open = Enum.filter(github_prs, &(&1.source == :github))
+      gitlab_open = Enum.filter(gitlab_mrs, &(&1.source == :gitlab))
 
       PrCache.upsert_all(user.id, all_prs)
-      if github_status == :ok, do: PrCache.sync(user.id, github_ids, "github")
-      if gitlab_status == :ok, do: PrCache.sync(user.id, gitlab_ids, "gitlab")
+      if github_status == :ok, do: PrCache.sync(user.id, github_open, "github")
+      if gitlab_status == :ok, do: PrCache.sync(user.id, gitlab_open, "gitlab")
 
       Phoenix.PubSub.broadcast(
         Argus.PubSub,
@@ -119,6 +119,8 @@ defmodule Argus.Sync.Poller do
     username = user.gitlab_username
     base_url = user.gitlab_url
 
+    username = maybe_resolve_gitlab_username(user, token, username, base_url)
+
     if token && username do
       case GitlabClient.list_open_mrs(token, username, base_url) do
         {:ok, mrs} ->
@@ -142,6 +144,25 @@ defmodule Argus.Sync.Poller do
       )
 
       {:skip, []}
+    end
+  end
+
+  defp maybe_resolve_gitlab_username(_user, token, username, _base_url)
+       when is_nil(token) or not is_nil(username),
+       do: username
+
+  defp maybe_resolve_gitlab_username(user, token, _username, base_url) do
+    case GitlabClient.validate_token(token, base_url) do
+      {:ok, %{username: resolved}} when is_binary(resolved) ->
+        user
+        |> User.upsert_changeset(%{gitlab_username: resolved})
+        |> Repo.update()
+
+        Logger.info("Poller: auto-resolved GitLab username to #{resolved} for #{user.login}")
+        resolved
+
+      _ ->
+        nil
     end
   end
 

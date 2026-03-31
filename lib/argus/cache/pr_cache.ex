@@ -87,13 +87,28 @@ defmodule Argus.Cache.PrCache do
     |> Enum.uniq_by(fn pr -> {pr.source, pr.repo_owner, pr.repo_name, pr.number} end)
   end
 
-  def sync(user_id, current_pr_ids, source \\ "github") do
-    from(c in CachedPullRequest,
-      where:
-        c.user_id == ^user_id and c.source == ^source and
-          c.number not in ^current_pr_ids
-    )
-    |> Repo.delete_all()
+  def sync(user_id, current_prs, source \\ "github") do
+    keys_to_keep =
+      MapSet.new(current_prs, fn pr -> {pr.repo_owner, pr.repo_name, pr.number} end)
+
+    cached_ids =
+      from(c in CachedPullRequest,
+        where: c.user_id == ^user_id and c.source == ^source,
+        select: {c.id, c.repo_owner, c.repo_name, c.number}
+      )
+      |> Repo.all()
+
+    ids_to_delete =
+      cached_ids
+      |> Enum.reject(fn {_id, owner, repo, number} ->
+        MapSet.member?(keys_to_keep, {owner, repo, number})
+      end)
+      |> Enum.map(fn {id, _, _, _} -> id end)
+
+    if ids_to_delete != [] do
+      from(c in CachedPullRequest, where: c.id in ^ids_to_delete)
+      |> Repo.delete_all()
+    end
   end
 
   def missing_source?(user_id, source) do
